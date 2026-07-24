@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sanjog Outlet Progress Tracker — TRLM</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --navy:#0b3d66; --navy-deep:#082c4a; --gold:#e08a1e; --paper:#faf7f0;
+    --paper-line:#e6e0d2; --ink:#1f2937; --ink-soft:#6b7280; --ok:#1c7a3e; --warn:#b8860b; --bad:#b3261e;
+    --card:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Roboto,Arial,sans-serif;background:var(--paper);color:var(--ink);}
+  .mono{font-family:'Consolas',monospace;}
+  a{color:var(--navy);}
+  button{cursor:pointer;font-family:inherit;}
+  input,select,textarea{font-family:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--paper-line);border-radius:6px;background:#fff;color:var(--ink);width:100%;}
+  label{font-size:12.5px;color:var(--ink-soft);font-weight:600;display:block;margin:10px 0 4px;}
+  .btn{background:var(--navy);color:#fff;border:none;border-radius:6px;padding:9px 16px;font-size:13.5px;font-weight:600;}
+  .btn:hover{background:var(--navy-deep);}
+  .btn.gold{background:var(--gold);}
+  .btn.ghost{background:transparent;color:var(--navy);border:1px solid var(--navy);}
+  .btn.danger{background:var(--bad);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:700;}
+  .badge.yes{background:#e6f4ea;color:var(--ok);} .badge.no{background:#fdecea;color:var(--bad);}
+
+  /* header */
+  header{background:#fff;border-bottom:1px solid var(--paper-line);position:sticky;top:0;z-index:50;}
+  .header-inner{max-width:1280px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:16px;}
+  .header-inner img.logo{height:52px;width:52px;object-fit:contain;}
+  .header-title{flex:1;text-align:center;}
+  .header-title h1{margin:0;font-size:19px;color:var(--navy);letter-spacing:.3px;}
+  .header-title p{margin:2px 0 0;font-size:12px;color:var(--ink-soft);}
+  nav.tabs{display:flex;gap:4px;}
+  nav.tabs button{background:transparent;border:none;padding:8px 14px;font-size:13.5px;font-weight:600;color:var(--ink-soft);border-bottom:3px solid transparent;}
+  nav.tabs button.active{color:var(--navy);border-bottom-color:var(--gold);}
+
+  /* hero */
+  .hero{position:relative;background-image:linear-gradient(180deg,rgba(8,44,74,.72),rgba(8,44,74,.85)),url('assets/bg.jpg');background-size:cover;background-position:center;color:#fff;padding:40px 20px 30px;text-align:center;}
+  .hero h2{margin:0;font-size:30px;letter-spacing:.3px;}
+  .hero p{margin:6px 0 0;font-size:14.5px;opacity:.9;}
+  .kpis{max-width:1100px;margin:24px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;}
+  .kpi{background:rgba(255,255,255,.12);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:14px;}
+  .kpi .num{font-size:22px;font-weight:800;}
+  .kpi .lbl{font-size:12px;opacity:.85;margin-top:2px;}
+
+  main{max-width:1280px;margin:0 auto;padding:20px;}
+  .card{background:var(--card);border:1px solid var(--paper-line);border-radius:10px;padding:16px;margin-bottom:18px;}
+  .card h3{margin:0 0 12px;font-size:15px;color:var(--navy);}
+  .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
+  .filters .fld{min-width:150px;}
+  .filters label{margin:0 0 4px;}
+
+  .charts-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;}
+  @media(max-width:900px){.charts-grid{grid-template-columns:1fr;}}
+  .chart-box{position:relative;height:280px;}
+
+  .est-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+  .est-card{border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:#fff;display:flex;flex-direction:column;}
+  .est-card .thumb{height:130px;background:#eee;background-size:cover;background-position:center;}
+  .est-card .body{padding:12px;flex:1;display:flex;flex-direction:column;gap:4px;}
+  .est-card .name{font-weight:700;font-size:14.5px;color:var(--navy);}
+  .est-card .meta{font-size:12px;color:var(--ink-soft);}
+  .est-card .stats{display:flex;justify-content:space-between;margin-top:8px;font-size:12.5px;}
+  .est-card .stats b{display:block;font-size:14px;color:var(--ink);}
+  .est-card .foot{padding:10px 12px;border-top:1px solid var(--paper-line);}
+  .est-card .foot button{width:100%;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--paper-line);}
+  th{color:var(--ink-soft);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:800px){.grid2{grid-template-columns:1fr;}}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  @media(max-width:800px){.grid3{grid-template-columns:1fr;}}
+
+  .login-wrap{max-width:420px;margin:60px auto;}
+  .login-tabs{display:flex;gap:6px;margin-bottom:14px;}
+  .login-tabs button{flex:1;padding:9px;border-radius:6px;background:#f1efe7;border:1px solid var(--paper-line);font-weight:600;font-size:13px;color:var(--ink-soft);}
+  .login-tabs button.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .error-box{background:#fdecea;color:var(--bad);border:1px solid #f5c2c0;border-radius:6px;padding:8px 12px;font-size:13px;margin-top:10px;}
+  .hint{font-size:12px;color:var(--ink-soft);margin-top:8px;}
+
+  .modal-bg{position:fixed;inset:0;background:rgba(8,44,74,.55);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .modal{background:#fff;border-radius:10px;max-width:760px;width:100%;max-height:88vh;overflow:auto;padding:22px;position:relative;}
+  .modal .close{position:absolute;top:12px;right:14px;background:transparent;border:none;font-size:22px;color:var(--ink-soft);}
+  .photo-thumb{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--paper-line);cursor:pointer;margin:3px;}
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--navy);color:#fff;padding:11px 18px;border-radius:8px;font-size:13.5px;box-shadow:0 4px 14px rgba(0,0,0,.2);z-index:200;}
+
+  .report-header{display:flex;align-items:center;gap:14px;border-bottom:2px solid var(--navy);padding-bottom:12px;margin-bottom:14px;}
+  .report-header img{height:56px;}
+  .report-header h2{margin:0;color:var(--navy);font-size:17px;}
+  .report-header p{margin:2px 0 0;font-size:11.5px;color:var(--ink-soft);}
+  @media print{ header,.no-print{display:none !important;} main{padding:0;} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============ CONFIG ============ */
+const API_URL = "https://script.google.com/macros/s/AKfycbxy3f_874roUZEubw5mF1bakX6a4mr4uQsPcLly7W7rxy6zFOVccUmqFmCbSqksqMyRWg/exec";
+
+const DISTRICTS = {
+  "DHALAI": ["AMBASSA","CHAWMANU","DUMBURNAGAR","DURGACHOWMUHANI","GANGANAGAR","MANU","RAISHYABARI","SALEMA"],
+  "GOMATI": ["AMARPUR","KAKRABAN","KARBOOK","KILLA","MATABARI","OMPI","SILACHARI","TEPANIA"],
+  "KHOWAI": ["KALYANPUR","KHOWAI","MUNGIAKAMI","PADMABIL","TELIAMURA","TULASHIKHAR"],
+  "NORTH TRIPURA": ["DAMCHERRA","DASDA","JAMPUI HILLS","JUBARAJNAGAR","KADAMTALA","KALACHERRA","LALJURI","PANISAGAR"],
+  "SEPAHIJALA": ["BISHALGHAR","BOXANAGAR","CHARILAM","JAMPUIJALA","KATHALIA","MOHANBHOG","NALCHAR"],
+  "SOUTH TRIPURA": ["BC NAGAR","BOKAFA","HRISHYAMUKH","JOLAIBARI","POANGBARI","RAJNAGAR","RUPAICHARI","SATCHAND"],
+  "UNAKOTI": ["CHANDIPUR","GOURNAGAR","KUMARGHAT","PECHARTHAL"],
+  "WEST TRIPURA": ["BAMUTIA","BELBARI","DUKLI","HEZAMARA","JIRANIA","LEFUNGA","MANDWI","MOHANPUR","OLD AGARTALA"]
+};
+const CATEGORIES = ["Sanjog Outlet","SKU-Outlet","Sanjog Canteen","Rural Mart","OSOP","Sanjog Kiosk"];
+const FY_LIST = ["2024-25","2025-26","2026-27","2027-28","2028-29"];
+const MONTH_ORDER = ["04","05","06","07","08","09","10","11","12","01","02","03"];
+const MONTH_NAMES = {"01":"Jan","02":"Feb","03":"Mar","04":"Apr","05":"May","06":"Jun","07":"Jul","08":"Aug","09":"Sep","10":"Oct","11":"Nov","12":"Dec"};
+
+function currentFY(){
+  const d = new Date(); const y = d.getFullYear(); const m = d.getMonth()+1;
+  return m>=4 ? (y+"-"+String(y+1).slice(2)) : ((y-1)+"-"+String(y).slice(2));
+}
+
+/* ============ STATE ============ */
+const STATE = {
+  view: "dashboard", // dashboard | login | portal | admin
+  loginTab: "establishment",
+  auth: null, // {type:'admin'} or {type:'establishment', id}
+  data: {establishments:[], sales:[]},
+  loaded: false,
+  filters: {fy: currentFY(), district:"All", block:"All", category:"All"},
+  modal: null, // {type:'establishment', id} | {type:'photo', ...}
+  portalTab: "profile",
+  adminTab: "add",
+  editingProfile: false,
+  loginError: "", busy:false, toast:null,
+  charts: {}
+};
+
+/* ============ API ============ */
+async function apiGet(action){
+  const res = await fetch(API_URL + "?action=" + action);
+  return res.json();
+}
+async function apiPost(action, payload){
+  const res = await fetch(API_URL, {method:"POST", body: JSON.stringify(Object.assign({action}, payload))});
+  return res.json();
+}
+async function refreshData(){
+  const d = await apiGet("getData");
+  STATE.data = d; STATE.loaded = true;
+}
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = ()=> resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+function showToast(msg){ STATE.toast = msg; render(); setTimeout(()=>{ STATE.toast=null; render(); }, 3200); }
+function fmtINR(n){ return "₹" + (Number(n)||0).toLocaleString('en-IN'); }
+function esc(s){ return (s===undefined||s===null) ? "" : String(s); }
+
+/* ============ DERIVED DATA ============ */
+function filteredEstablishments(){
+  return STATE.data.establishments.filter(e=>{
+    if(STATE.filters.district!=="All" && e.district!==STATE.filters.district) return false;
+    if(STATE.filters.block!=="All" && e.block!==STATE.filters.block) return false;
+    if(STATE.filters.category!=="All" && e.category!==STATE.filters.category) return false;
+    return true;
+  });
+}
+function salesForEstablishments(ids, fy){
+  return STATE.data.sales.filter(s=> ids.includes(s.establishmentId) && (!fy || s.fy===fy));
+}
+function kpisFor(estList, fy){
+  const ids = estList.map(e=>e.id);
+  const sales = salesForEstablishments(ids, fy);
+  const totalSales = sales.reduce((a,s)=>a+s.salesAmount,0);
+  const totalInvestment = sales.reduce((a,s)=>a+s.investmentAmount,0);
+  const totalProfit = sales.reduce((a,s)=>a+s.profitAmount,0);
+  return {count: estList.length, totalSales, totalInvestment, totalProfit};
+}
+function monthWiseTotals(estList, fy){
+  const ids = estList.map(e=>e.id);
+  const sales = salesForEstablishments(ids, fy);
+  const totals = {}; MONTH_ORDER.forEach(m=> totals[m]=0);
+  sales.forEach(s=>{
+    const m = (s.periodLabel||"").split("-")[1];
+    if(m && totals[m]!==undefined) totals[m]+=s.salesAmount;
+  });
+  return MONTH_ORDER.map(m=>totals[m]);
+}
+function districtWiseTotals(estList, fy){
+  const byDist = {};
+  Object.keys(DISTRICTS).forEach(d=>byDist[d]=0);
+  estList.forEach(e=>{
+    const sales = salesForEstablishments([e.id], fy);
+    byDist[e.district] = (byDist[e.district]||0) + sales.reduce((a,s)=>a+s.salesAmount,0);
+  });
+  return byDist;
+}
+function categoryWiseCounts(estList){
+  const byCat = {}; CATEGORIES.forEach(c=>byCat[c]=0);
+  estList.forEach(e=> byCat[e.category] = (byCat[e.category]||0) + 1);
+  return byCat;
+}
+
+/* ============ RENDER ============ */
+function render(){
+  const app = document.getElementById('app');
+  let html = renderHeader();
+  if(STATE.view === "login") html += renderLogin();
+  else if(STATE.view === "dashboard") html += renderDashboard();
+  else if(STATE.view === "portal") html += renderPortal();
+  else if(STATE.view === "admin") html += renderAdmin();
+  if(STATE.modal) html += renderModal();
+  if(STATE.toast) html += `<div class="toast">${esc(STATE.toast)}</div>`;
+  app.innerHTML = html;
+  bindEvents();
+  drawCharts();
+}
+
+function renderHeader(){
+  const loggedIn = !!STATE.auth;
+  return `<header><div class="header-inner">
+    <img class="logo" src="assets/trlm-logo.png" alt="TRLM">
+    <div class="header-title">
+      <h1>Sanjog Outlet Progress Tracker</h1>
+      <p>Tripura Rural Livelihood Mission</p>
+    </div>
+    <img class="logo" src="assets/sanjog-logo.png" alt="Sanjog">
+  </div>
+  <div class="header-inner" style="padding-top:0;padding-bottom:0;border-top:1px solid var(--paper-line);">
+    <nav class="tabs">
+      <button data-nav="dashboard" class="${STATE.view==='dashboard'?'active':''}">Dashboard</button>
+      ${loggedIn && STATE.auth.type==='establishment' ? `<button data-nav="portal" class="${STATE.view==='portal'?'active':''}">My Portal</button>` : ''}
+      ${loggedIn && STATE.auth.type==='admin' ? `<button data-nav="admin" class="${STATE.view==='admin'?'active':''}">Admin</button>` : ''}
+    </nav>
+    <div style="flex:1"></div>
+    ${loggedIn
+      ? `<span class="mono" style="font-size:12.5px;color:var(--ink-soft);margin-right:10px;">${STATE.auth.type==='admin'?'Admin':STATE.auth.id}</span><button class="btn ghost" id="btn-logout" style="padding:6px 12px;">Logout</button>`
+      : `<button class="btn" id="btn-login" style="padding:6px 14px;">Login</button>`}
+  </div></header>`;
+}
+
+function renderDashboard(){
+  if(!STATE.loaded) return `<main><p>Loading dashboard…</p></main>`;
+  const estList = filteredEstablishments();
+  const fy = STATE.filters.fy;
+  const k = kpisFor(estList, fy);
+  const blocks = STATE.filters.district!=="All" ? DISTRICTS[STATE.filters.district] : [];
+
+  return `
+  <div class="hero">
+    <h2>Sanjog Outlet Progress Tracker</h2>
+    <p>Tripura Rural Livelihood Mission — women SHG-run outlets, canteens, kiosks &amp; rural marts across the state</p>
+    <div class="kpis">
+      <div class="kpi"><div class="num">${k.count}</div><div class="lbl">Establishments (filtered)</div></div>
+      <div class="kpi"><div class="num">${fmtINR(k.totalSales)}</div><div class="lbl">Total Sales — FY ${fy}</div></div>
+      <div class="kpi"><div class="num">${fmtINR(k.totalInvestment)}</div><div class="lbl">Total Investment — FY ${fy}</div></div>
+      <div class="kpi"><div class="num">${fmtINR(k.totalProfit)}</div><div class="lbl">Total Profit — FY ${fy}</div></div>
+    </div>
+  </div>
+  <main>
+    <div class="card">
+      <div class="filters">
+        <div class="fld"><label>Financial Year</label>
+          <select id="f-fy">${FY_LIST.map(y=>`<option ${y===fy?'selected':''}>${y}</option>`).join('')}</select>
+        </div>
+        <div class="fld"><label>District</label>
+          <select id="f-district"><option ${STATE.filters.district==='All'?'selected':''}>All</option>
+            ${Object.keys(DISTRICTS).map(d=>`<option ${d===STATE.filters.district?'selected':''}>${d}</option>`).join('')}</select>
+        </div>
+        <div class="fld"><label>Block</label>
+          <select id="f-block"><option ${STATE.filters.block==='All'?'selected':''}>All</option>
+            ${blocks.map(b=>`<option ${b===STATE.filters.block?'selected':''}>${b}</option>`).join('')}</select>
+        </div>
+        <div class="fld"><label>Category</label>
+          <select id="f-category"><option ${STATE.filters.category==='All'?'selected':''}>All</option>
+            ${CATEGORIES.map(c=>`<option ${c===STATE.filters.category?'selected':''}>${c}</option>`).join('')}</select>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="card"><h3>Month-wise Sales Trend — FY ${fy}</h3><div class="chart-box"><canvas id="chart-trend"></canvas></div></div>
+      <div class="card"><h3>Establishments by Category</h3><div class="chart-box"><canvas id="chart-category"></canvas></div></div>
+    </div>
+    <div class="card"><h3>Sales by District — FY ${fy}</h3><div class="chart-box"><canvas id="chart-district"></canvas></div></div>
+
+    <div class="card">
+      <h3>Establishments (${estList.length})</h3>
+      <div class="est-grid">
+        ${estList.map(renderEstCard).join('') || '<p style="color:var(--ink-soft);">No establishments match the current filters.</p>'}
+      </div>
+    </div>
+  </main>`;
+}
+
+function renderEstCard(e){
+  const sales = salesForEstablishments([e.id], STATE.filters.fy);
+  const total = sales.reduce((a,s)=>a+s.salesAmount,0);
+  const thumb = e.mainPhoto && e.mainPhoto.thumbUrl ? e.mainPhoto.thumbUrl : '';
+  return `<div class="est-card">
+    <div class="thumb" style="${thumb?`background-image:url('${thumb}')`:'display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;'}">${thumb?'':'No photo'}</div>
+    <div class="body">
+      <div class="name">${esc(e.name)}</div>
+      <div class="meta">${esc(e.category)} · ${esc(e.block)}, ${esc(e.district)}</div>
+      <div class="stats"><div>Sales FY${STATE.filters.fy}<b>${fmtINR(total)}</b></div><div>Members<b>${e.shgMemberCount}</b></div></div>
+    </div>
+    <div class="foot"><button class="btn ghost" data-view-est="${e.id}">View Details</button></div>
+  </div>`;
+}
+
+/* ---- login ---- */
+function renderLogin(){
+  return `<main><div class="login-wrap card">
+    <div class="login-tabs">
+      <button data-logintab="establishment" class="${STATE.loginTab==='establishment'?'active':''}">Establishment Login</button>
+      <button data-logintab="admin" class="${STATE.loginTab==='admin'?'active':''}">Admin Login</button>
+    </div>
+    ${STATE.loginTab==='establishment' ? `
+      <label>Establishment ID</label><input id="li-id" placeholder="e.g. SNJ-AB12CD">
+      <label>Password</label><input id="li-pw" type="password" placeholder="Password">
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn" id="btn-est-login" style="flex:1;">Login</button>
+        <button class="btn ghost" id="btn-est-setpw" style="flex:1;">First time? Set password</button>
+      </div>
+      <p class="hint">Your Establishment ID is provided by the TRLM admin. If you haven't set a password yet, use "Set password" with your ID.</p>
+    ` : `
+      <label>Admin Password</label><input id="li-apw" type="password" placeholder="Admin password">
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn" id="btn-admin-login" style="flex:1;">Login</button>
+        <button class="btn ghost" id="btn-admin-setpw" style="flex:1;">First time? Set password</button>
+      </div>
+    `}
+    ${STATE.loginError?`<div class="error-box">${esc(STATE.loginError)}</div>`:''}
+  </div></main>`;
+}
+
+/* ---- establishment portal ---- */
+function renderPortal(){
+  const e = STATE.data.establishments.find(x=>x.id===STATE.auth.id);
+  if(!e) return `<main><p>Loading…</p></main>`;
+  const mySales = STATE.data.sales.filter(s=>s.establishmentId===e.id).sort((a,b)=> (b.periodLabel||"").localeCompare(a.periodLabel||""));
+  return `<main>
+    <div class="card">
+      <nav class="tabs" style="border-bottom:1px solid var(--paper-line);margin-bottom:14px;">
+        <button data-ptab="profile" class="${STATE.portalTab==='profile'?'active':''}">My Profile</button>
+        <button data-ptab="photos" class="${STATE.portalTab==='photos'?'active':''}">Photos &amp; Documents</button>
+        <button data-ptab="sales" class="${STATE.portalTab==='sales'?'active':''}">Daily / Monthly Sales</button>
+      </nav>
+      ${STATE.portalTab==='profile' ? renderProfileTab(e) : ''}
+      ${STATE.portalTab==='photos' ? renderPhotosTab(e) : ''}
+      ${STATE.portalTab==='sales' ? renderSalesTab(e, mySales) : ''}
+    </div>
+  </main>`;
+}
+
+function renderProfileTab(e){
+  const editable = !e.profileEdited;
+  const dis = STATE.editingProfile ? '' : 'disabled';
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;">${esc(e.name)} <span class="mono" style="font-size:12px;color:var(--ink-soft);">(${e.id})</span></h3>
+      ${editable ? `<button class="btn ${STATE.editingProfile?'ghost':''}" id="btn-toggle-edit">${STATE.editingProfile?'Cancel':'Edit (one-time only)'}</button>` : `<span class="badge no">Profile already edited once</span>`}
+    </div>
+    <form id="form-profile">
+      <div class="grid3">
+        <div><label>District</label><input value="${esc(e.district)}" disabled></div>
+        <div><label>Block</label><input value="${esc(e.block)}" disabled></div>
+        <div><label>Category</label><input value="${esc(e.category)}" disabled></div>
+      </div>
+      <div class="grid3">
+        <div><label>Location</label><input name="location" value="${esc(e.location)}" ${dis}></div>
+        <div><label>Latitude</label><input name="latitude" value="${esc(e.latitude)}" ${dis}></div>
+        <div><label>Longitude</label><input name="longitude" value="${esc(e.longitude)}" ${dis}></div>
+      </div>
+      <div class="grid3">
+        <div><label>Owner Type (VO/CLF)</label><input value="${esc(e.ownerType)}" disabled></div>
+        <div><label>Owner Name</label><input name="ownerName" value="${esc(e.ownerName)}" ${dis}></div>
+        <div><label>SHG Members Managing</label><input name="shgMemberCount" value="${esc(e.shgMemberCount)}" ${dis}></div>
+      </div>
+      <div class="grid3">
+        <div><label>Owner (VO/CLF) Contact</label><input name="ownerContact" value="${esc(e.ownerContact)}" ${dis}></div>
+        <div><label>Date of Inception</label><input name="inceptionDate" type="date" value="${esc(e.inceptionDate)}" ${dis}></div>
+        <div><label>Operation Hours / Day</label><input name="operationHours" value="${esc(e.operationHours)}" ${dis}></div>
+      </div>
+      <div class="grid3">
+        <div><label>Signboard Mounted</label><select name="signboardMounted" ${dis}><option ${e.signboardMounted==='Yes'?'selected':''}>Yes</option><option ${e.signboardMounted==='No'?'selected':''}>No</option></select></div>
+        <div><label>Dress Code for SHG Members</label><select name="dressCode" ${dis}><option ${e.dressCode==='Yes'?'selected':''}>Yes</option><option ${e.dressCode==='No'?'selected':''}>No</option></select></div>
+        <div><label>Daily Sale Record Maintained</label><select name="dailySaleRecordMaintained" ${dis}><option ${e.dailySaleRecordMaintained==='Yes'?'selected':''}>Yes</option><option ${e.dailySaleRecordMaintained==='No'?'selected':''}>No</option></select></div>
+      </div>
+      <div class="grid3">
+        <div><label>Rent Being Paid</label><select name="rentPaid" ${dis}><option ${e.rentPaid==='Yes'?'selected':''}>Yes</option><option ${e.rentPaid==='No'?'selected':''}>No</option></select></div>
+        <div><label>Monthly Rent (₹, if any)</label><input name="monthlyRent" value="${esc(e.monthlyRent)}" ${dis}></div>
+        <div><label>Infrastructure Fund Received</label><select name="infraFundReceived" ${dis}><option ${e.infraFundReceived==='Yes'?'selected':''}>Yes</option><option ${e.infraFundReceived==='No'?'selected':''}>No</option></select></div>
+      </div>
+      <div class="grid2">
+        <div><label>Nodal Person Name</label><input name="nodalPersonName" value="${esc(e.nodalPersonName)}" ${dis}></div>
+        <div><label>Nodal Person Contact</label><input name="nodalPersonContact" value="${esc(e.nodalPersonContact)}" ${dis}></div>
+      </div>
+      ${STATE.editingProfile?`<button class="btn" id="btn-save-profile" style="margin-top:14px;">Save Changes</button>`:''}
+    </form>`;
+}
+
+function renderPhotosTab(e){
+  const activityThumbs = (e.activityPhotos||[]).map(p=>`<img class="photo-thumb" data-photo-id="${p.fileId}" data-photo-mime="${p.mime||''}" data-photo-preview="${p.previewUrl}" data-photo-open="${p.openUrl}" src="${p.thumbUrl}">`).join('');
+  return `
+    <div class="grid2">
+      <div>
+        <h3>Establishment Photo</h3>
+        ${e.mainPhoto && e.mainPhoto.fileId ? `<img class="photo-thumb" style="width:120px;height:120px;" data-photo-id="${e.mainPhoto.fileId}" data-photo-mime="${e.mainPhoto.mime||''}" data-photo-preview="${e.mainPhoto.previewUrl}" data-photo-open="${e.mainPhoto.openUrl}" src="${e.mainPhoto.thumbUrl}">` : '<p class="hint">No photo uploaded yet.</p>'}
+        <label>Upload / replace establishment photo (max 5 MB)</label>
+        <input type="file" id="up-main" accept="image/*">
+        <button class="btn" id="btn-up-main" style="margin-top:8px;">Upload</button>
+      </div>
+      <div>
+        <h3>Agreement / Supporting Document</h3>
+        ${e.agreement && e.agreement.fileId ? `<img class="photo-thumb" data-photo-id="${e.agreement.fileId}" data-photo-mime="${e.agreement.mime||''}" data-photo-preview="${e.agreement.previewUrl}" data-photo-open="${e.agreement.openUrl}" src="${e.agreement.thumbUrl}">` : '<p class="hint">No document uploaded yet.</p>'}
+        <label>Upload agreement / document (max 5 MB, image or PDF)</label>
+        <input type="file" id="up-agreement" accept="image/*,application/pdf">
+        <button class="btn" id="btn-up-agreement" style="margin-top:8px;">Upload</button>
+      </div>
+    </div>
+    <div style="margin-top:18px;">
+      <h3>Activity Photos</h3>
+      <div>${activityThumbs || '<p class="hint">No activity photos uploaded yet.</p>'}</div>
+      <label>Add an activity photo (max 5 MB)</label>
+      <input type="file" id="up-activity" accept="image/*">
+      <button class="btn" id="btn-up-activity" style="margin-top:8px;">Upload</button>
+    </div>`;
+}
+
+function renderSalesTab(e, mySales){
+  const fy = currentFY();
+  return `
+    <div class="grid2">
+      <div>
+        <h3>Add Sales Entry</h3>
+        <p class="hint">Entries cannot be edited once saved — please double-check figures before submitting.</p>
+        <form id="form-sale">
+          <label>Entry Type</label>
+          <select name="periodType" id="sale-periodtype">
+            <option value="Daily">Daily (today's sale, FY ${fy} onward)</option>
+            <option value="Monthly">Monthly total (past financial years)</option>
+          </select>
+          <div id="sale-period-fields"></div>
+          <label>Sales Amount (₹)</label><input name="salesAmount" type="number" min="0" required>
+          <label>Investment Amount (₹, if any)</label><input name="investmentAmount" type="number" min="0" value="0">
+          <label>Profit (₹)</label><input name="profitAmount" type="number" min="0" value="0">
+          <label>Products Available (comma separated)</label><textarea name="productsAvailable" rows="2"></textarea>
+          <label>Photo of products / activity (optional, max 5 MB)</label>
+          <input type="file" id="sale-photo" accept="image/*">
+          <button class="btn" id="btn-save-sale" style="margin-top:12px;">Save Entry</button>
+        </form>
+      </div>
+      <div>
+        <h3>My Sales History</h3>
+        <div style="max-height:420px;overflow:auto;">
+        <table><thead><tr><th>Period</th><th>FY</th><th>Sales</th><th>Investment</th><th>Profit</th><th>Photo</th></tr></thead>
+        <tbody>${mySales.map(s=>`<tr>
+          <td>${esc(s.periodLabel)}</td><td>${esc(s.fy)}</td><td class="mono">${fmtINR(s.salesAmount)}</td>
+          <td class="mono">${fmtINR(s.investmentAmount)}</td><td class="mono">${fmtINR(s.profitAmount)}</td>
+          <td>${s.photo && s.photo.fileId?`<img class="photo-thumb" style="width:34px;height:34px;" data-photo-id="${s.photo.fileId}" data-photo-mime="${s.photo.mime||''}" data-photo-preview="${s.photo.previewUrl}" data-photo-open="${s.photo.openUrl}" src="${s.photo.thumbUrl}">`:'—'}</td>
+        </tr>`).join('') || `<tr><td colspan="6" class="hint">No entries yet.</td></tr>`}</tbody></table>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderSalePeriodFields(periodType){
+  if(periodType==="Monthly"){
+    return `<div class="grid2">
+      <div><label>Financial Year</label><select name="fy">${FY_LIST.map(y=>`<option ${y===currentFY()?'':''}>${y}</option>`).join('')}</select></div>
+      <div><label>Month</label><select name="month">${MONTH_ORDER.map(m=>`<option value="${m}">${MONTH_NAMES[m]}</option>`).join('')}</select></div>
+    </div>`;
+  }
+  return `<div><label>Date</label><input name="date" type="date" value="${new Date().toISOString().slice(0,10)}"></div>`;
+}
+
+/* ---- admin ---- */
+function renderAdmin(){
+  return `<main>
+    <div class="card">
+      <nav class="tabs" style="border-bottom:1px solid var(--paper-line);margin-bottom:14px;">
+        <button data-atab="add" class="${STATE.adminTab==='add'?'active':''}">Add New Establishment</button>
+        <button data-atab="manage" class="${STATE.adminTab==='manage'?'active':''}">Manage Establishments</button>
+        <button data-atab="sales" class="${STATE.adminTab==='sales'?'active':''}">Manage Sales Entries</button>
+      </nav>
+      ${STATE.adminTab==='add' ? renderAdminAdd() : ''}
+      ${STATE.adminTab==='manage' ? renderAdminManage() : ''}
+      ${STATE.adminTab==='sales' ? renderAdminSales() : ''}
+    </div>
+  </main>`;
+}
+
+function renderAdminAdd(){
+  const dOpts = Object.keys(DISTRICTS).map(d=>`<option>${d}</option>`).join('');
+  return `<form id="form-add-est">
+    <h3>Basic Details</h3>
+    <div class="grid3">
+      <div><label>District</label><select name="district" id="add-district">${dOpts}</select></div>
+      <div><label>Block</label><select name="block" id="add-block"></select></div>
+      <div><label>Establishment Name</label><input name="name" required></div>
+    </div>
+    <div class="grid3">
+      <div><label>Category</label><select name="category">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
+      <div><label>Location</label><input name="location"></div>
+      <div><label>Custom Login ID (optional — auto-generated if blank)</label><input name="customId" placeholder="e.g. SNJ-AGT-01"></div>
+    </div>
+    <div class="grid3">
+      <div><label>Latitude</label><input name="latitude"></div>
+      <div><label>Longitude</label><input name="longitude"></div>
+      <div></div>
+    </div>
+    <h3 style="margin-top:16px;">Governance Details</h3>
+    <div class="grid3">
+      <div><label>Owned By</label><select name="ownerType" id="add-ownertype"><option value="VO">VO</option><option value="CLF">CLF</option></select></div>
+      <div><label id="add-ownername-label">VO Name</label><input name="ownerName"></div>
+      <div><label>No. of SHG Members Managing</label><input name="shgMemberCount" type="number" min="0"></div>
+    </div>
+    <div class="grid3">
+      <div><label>Contact of VO/CLF (Owner)</label><input name="ownerContact"></div>
+      <div><label>Date of Inception</label><input name="inceptionDate" type="date"></div>
+      <div><label>Total Operation Hours / Day</label><input name="operationHours"></div>
+    </div>
+    <h3 style="margin-top:16px;">Operational Details</h3>
+    <div class="grid3">
+      <div><label>Sanjog Signboard Mounted</label><select name="signboardMounted"><option>Yes</option><option>No</option></select></div>
+      <div><label>Dress Code for SHG Members</label><select name="dressCode"><option>Yes</option><option>No</option></select></div>
+      <div><label>Daily Sale Record Maintained</label><select name="dailySaleRecordMaintained"><option>Yes</option><option>No</option></select></div>
+    </div>
+    <div class="grid3">
+      <div><label>Rent Being Paid</label><select name="rentPaid" id="add-rentpaid"><option>No</option><option>Yes</option></select></div>
+      <div><label>Monthly Rent (₹, if Yes)</label><input name="monthlyRent" type="number" min="0"></div>
+      <div><label>Infrastructure Fund Received</label><select name="infraFundReceived"><option>No</option><option>Yes</option></select></div>
+    </div>
+    <div class="grid2">
+      <div><label>Concerned Nodal Person Name</label><input name="nodalPersonName"></div>
+      <div><label>Contact No. of Nodal Person</label><input name="nodalPersonContact"></div>
+    </div>
+    <p class="hint">Photos and documents (establishment photo, activity photos, agreement) can be uploaded after creating the record, from the establishment's own login, or by an admin via "Manage Establishments".</p>
+    <button class="btn" id="btn-add-est" style="margin-top:12px;">Create Establishment</button>
+  </form>`;
+}
+
+function renderAdminManage(){
+  const rows = STATE.data.establishments.map(e=>`<tr>
+    <td class="mono">${e.id}</td><td>${esc(e.name)}</td><td>${esc(e.district)}</td><td>${esc(e.block)}</td>
+    <td>${esc(e.category)}</td><td><span class="badge ${e.hasPassword?'yes':'no'}">${e.hasPassword?'Password set':'Not set'}</span></td>
+    <td><button class="btn ghost" data-view-est="${e.id}" style="padding:5px 10px;">View</button>
+        ${e.hasPassword?`<button class="btn danger" data-reset-pw="${e.id}" style="padding:5px 10px;">Reset PW</button>`:''}</td>
+  </tr>`).join('');
+  return `<h3>All Establishments (${STATE.data.establishments.length})</h3>
+    <div style="max-height:520px;overflow:auto;">
+    <table><thead><tr><th>ID</th><th>Name</th><th>District</th><th>Block</th><th>Category</th><th>Login</th><th></th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="7" class="hint">No establishments yet.</td></tr>'}</tbody></table>
+    </div>`;
+}
+
+function renderAdminSales(){
+  const rows = STATE.data.sales.slice().sort((a,b)=>(b.periodLabel||"").localeCompare(a.periodLabel||"")).map(s=>{
+    const e = STATE.data.establishments.find(x=>x.id===s.establishmentId);
+    return `<tr>
+      <td class="mono">${s.id}</td><td>${e?esc(e.name):s.establishmentId}</td><td>${esc(s.periodLabel)}</td><td>${esc(s.fy)}</td>
+      <td class="mono">${fmtINR(s.salesAmount)}</td><td class="mono">${fmtINR(s.investmentAmount)}</td><td class="mono">${fmtINR(s.profitAmount)}</td>
+      <td><button class="btn danger" data-delete-sale="${s.id}" style="padding:5px 10px;">Delete</button></td>
+    </tr>`;
+  }).join('');
+  return `<h3>All Sales Entries (${STATE.data.sales.length})</h3>
+    <p class="hint">Use delete only to correct genuine data-entry errors — establishment users cannot edit sales themselves.</p>
+    <div style="max-height:520px;overflow:auto;">
+    <table><thead><tr><th>Sale ID</th><th>Establishment</th><th>Period</th><th>FY</th><th>Sales</th><th>Investment</th><th>Profit</th><th></th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="8" class="hint">No entries yet.</td></tr>'}</tbody></table>
+    </div>`;
+}
+
+/* ---- modal / report ---- */
+function renderModal(){
+  if(STATE.modal.type === "photo"){
+    const p = STATE.modal;
+    const isImage = (p.mime||'').indexOf('image/')===0;
+    const body = isImage
+      ? `<img src="https://drive.google.com/thumbnail?id=${p.id}&sz=w1600" style="max-width:100%;border-radius:8px;">`
+      : `<iframe src="${p.preview}" style="width:100%;height:65vh;border:1px solid var(--paper-line);border-radius:8px;"></iframe>`;
+    return `<div class="modal-bg" id="modal-bg"><div class="modal">
+      <button class="close" id="modal-close">&times;</button>
+      <b>Attachment</b>${body}
+      <p style="margin-top:10px;"><a href="${p.open}" target="_blank" rel="noopener">Open original in Google Drive →</a></p>
+    </div></div>`;
+  }
+  // establishment detail / report
+  const e = STATE.data.establishments.find(x=>x.id===STATE.modal.id);
+  if(!e) return '';
+  const sales = STATE.data.sales.filter(s=>s.establishmentId===e.id);
+  const totalSales = sales.reduce((a,s)=>a+s.salesAmount,0);
+  const totalInv = sales.reduce((a,s)=>a+s.investmentAmount,0);
+  const totalProfit = sales.reduce((a,s)=>a+s.profitAmount,0);
+  return `<div class="modal-bg" id="modal-bg"><div class="modal">
+    <button class="close no-print" id="modal-close">&times;</button>
+    <div class="report-header">
+      <img src="assets/trlm-logo.png"><div><h2>${esc(e.name)}</h2><p>Tripura Rural Livelihood Mission — Sanjog Outlet Progress Tracker</p></div><img src="assets/sanjog-logo.png" style="margin-left:auto;">
+    </div>
+    <div class="grid2">
+      <div><b>ID:</b> ${e.id}</div><div><b>Category:</b> ${esc(e.category)}</div>
+      <div><b>District:</b> ${esc(e.district)}</div><div><b>Block:</b> ${esc(e.block)}</div>
+      <div><b>Location:</b> ${esc(e.location)}</div><div><b>Owner:</b> ${esc(e.ownerType)} — ${esc(e.ownerName)}</div>
+      <div><b>SHG Members:</b> ${e.shgMemberCount}</div><div><b>Inception:</b> ${esc(e.inceptionDate)}</div>
+      <div><b>Nodal Person:</b> ${esc(e.nodalPersonName)} (${esc(e.nodalPersonContact)})</div>
+      <div><b>Signboard:</b> ${esc(e.signboardMounted)} · <b>Dress Code:</b> ${esc(e.dressCode)}</div>
+    </div>
+    <h3 style="margin-top:16px;">Cumulative Performance (all recorded periods)</h3>
+    <div class="grid3">
+      <div class="card" style="text-align:center;"><div style="font-size:18px;font-weight:800;">${fmtINR(totalSales)}</div><div class="hint">Total Sales</div></div>
+      <div class="card" style="text-align:center;"><div style="font-size:18px;font-weight:800;">${fmtINR(totalInv)}</div><div class="hint">Total Investment</div></div>
+      <div class="card" style="text-align:center;"><div style="font-size:18px;font-weight:800;">${fmtINR(totalProfit)}</div><div class="hint">Total Profit</div></div>
+    </div>
+    ${e.mainPhoto && e.mainPhoto.fileId ? `<h3>Photo</h3><img class="photo-thumb" style="width:140px;height:140px;" data-photo-id="${e.mainPhoto.fileId}" data-photo-mime="${e.mainPhoto.mime||''}" data-photo-preview="${e.mainPhoto.previewUrl}" data-photo-open="${e.mainPhoto.openUrl}" src="${e.mainPhoto.thumbUrl}">` : ''}
+    <div class="no-print" style="margin-top:16px;"><button class="btn gold" id="btn-print-report">Print / Save as PDF</button></div>
+  </div></div>`;
+}
+
+/* ============ CHARTS ============ */
+function drawCharts(){
+  Object.values(STATE.charts).forEach(c=>c && c.destroy());
+  STATE.charts = {};
+  if(STATE.view !== "dashboard" || !STATE.loaded) return;
+  const estList = filteredEstablishments();
+  const fy = STATE.filters.fy;
+
+  const trendEl = document.getElementById('chart-trend');
+  if(trendEl){
+    const vals = monthWiseTotals(estList, fy);
+    STATE.charts.trend = new Chart(trendEl, {type:'line', data:{
+      labels: MONTH_ORDER.map(m=>MONTH_NAMES[m]),
+      datasets:[{label:'Sales (₹)', data: vals, borderColor:'#0b3d66', backgroundColor:'rgba(11,61,102,.12)', fill:true, tension:.3}]
+    }, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}});
+  }
+  const catEl = document.getElementById('chart-category');
+  if(catEl){
+    const byCat = categoryWiseCounts(estList);
+    STATE.charts.category = new Chart(catEl, {type:'doughnut', data:{
+      labels:Object.keys(byCat), datasets:[{data:Object.values(byCat), backgroundColor:['#0b3d66','#e08a1e','#1c7a3e','#b3261e','#6b7280','#8e44ad']}]
+    }, options:{responsive:true, maintainAspectRatio:false}});
+  }
+  const distEl = document.getElementById('chart-district');
+  if(distEl){
+    const byDist = districtWiseTotals(estList, fy);
+    STATE.charts.district = new Chart(distEl, {type:'bar', data:{
+      labels:Object.keys(byDist), datasets:[{label:'Sales (₹)', data:Object.values(byDist), backgroundColor:'#e08a1e'}]
+    }, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}});
+  }
+}
+
+/* ============ EVENTS ============ */
+function on(id, evt, fn){ const el=document.getElementById(id); if(el) el.addEventListener(evt, fn); }
+
+function bindEvents(){
+  document.querySelectorAll('[data-nav]').forEach(b=> b.addEventListener('click', ()=>{ STATE.view=b.getAttribute('data-nav'); render(); }));
+  on('btn-login','click', ()=>{ STATE.view='login'; STATE.loginError=''; render(); });
+  on('btn-logout','click', ()=>{ STATE.auth=null; STATE.view='dashboard'; render(); });
+
+  document.querySelectorAll('[data-logintab]').forEach(b=> b.addEventListener('click', ()=>{ STATE.loginTab=b.getAttribute('data-logintab'); STATE.loginError=''; render(); }));
+
+  on('btn-est-login','click', async ()=>{
+    const id=document.getElementById('li-id').value.trim(), pw=document.getElementById('li-pw').value;
+    if(!id||!pw){ STATE.loginError="Enter ID and password."; render(); return; }
+    const r = await apiPost('establishmentLogin', {id, password: pw});
+    if(r.ok){ STATE.auth={type:'establishment', id}; STATE.view='portal'; STATE.loginError=''; await refreshData(); render(); }
+    else { STATE.loginError = r.error||"Login failed"; render(); }
+  });
+  on('btn-est-setpw','click', async ()=>{
+    const id=document.getElementById('li-id').value.trim(), pw=document.getElementById('li-pw').value;
+    if(!id||!pw){ STATE.loginError="Enter your ID and a new password, then click again."; render(); return; }
+    const r = await apiPost('establishmentSetPassword', {id, password: pw});
+    if(r.ok){ STATE.auth={type:'establishment', id}; STATE.view='portal'; STATE.loginError=''; await refreshData(); render(); showToast("Password set. You're logged in."); }
+    else { STATE.loginError = r.error||"Could not set password"; render(); }
+  });
+  on('btn-admin-login','click', async ()=>{
+    const pw=document.getElementById('li-apw').value;
+    const r = await apiPost('adminLogin', {password: pw});
+    if(r.ok){ STATE.auth={type:'admin'}; STATE.view='admin'; STATE.loginError=''; await refreshData(); render(); }
+    else { STATE.loginError = r.error||"Login failed"; render(); }
+  });
+  on('btn-admin-setpw','click', async ()=>{
+    const pw=document.getElementById('li-apw').value;
+    if(!pw){ STATE.loginError="Enter a password."; render(); return; }
+    const r = await apiPost('adminSetPassword', {password: pw});
+    if(r.ok){ STATE.auth={type:'admin'}; STATE.view='admin'; STATE.loginError=''; await refreshData(); render(); showToast("Admin password set."); }
+    else { STATE.loginError = r.error||"Could not set password"; render(); }
+  });
+
+  // filters
+  on('f-fy','change', e=>{ STATE.filters.fy=e.target.value; render(); });
+  on('f-district','change', e=>{ STATE.filters.district=e.target.value; STATE.filters.block='All'; render(); });
+  on('f-block','change', e=>{ STATE.filters.block=e.target.value; render(); });
+  on('f-category','change', e=>{ STATE.filters.category=e.target.value; render(); });
+
+  document.querySelectorAll('[data-view-est]').forEach(b=> b.addEventListener('click', ()=>{ STATE.modal={type:'establishment', id:b.getAttribute('data-view-est')}; render(); }));
+  document.querySelectorAll('[data-photo-id]').forEach(img=> img.addEventListener('click', ()=>{
+    STATE.modal = {type:'photo', id:img.getAttribute('data-photo-id'), mime:img.getAttribute('data-photo-mime'), preview:img.getAttribute('data-photo-preview'), open:img.getAttribute('data-photo-open')};
+    render();
+  }));
+  on('modal-close','click', ()=>{ STATE.modal=null; render(); });
+  on('modal-bg','click', e=>{ if(e.target.id==='modal-bg'){ STATE.modal=null; render(); } });
+  on('btn-print-report','click', ()=> window.print());
+
+  // portal tabs
+  document.querySelectorAll('[data-ptab]').forEach(b=> b.addEventListener('click', ()=>{ STATE.portalTab=b.getAttribute('data-ptab'); render(); }));
+  on('btn-toggle-edit','click', ()=>{ STATE.editingProfile=!STATE.editingProfile; render(); });
+  on('btn-save-profile','click', async (ev)=>{
+    ev.preventDefault();
+    const form = document.getElementById('form-profile');
+    const fd = new FormData(form);
+    const payload = {id: STATE.auth.id, actor:'establishment'};
+    fd.forEach((v,k)=> payload[k]=v);
+    const r = await apiPost('updateEstablishment', payload);
+    if(r.ok){ STATE.editingProfile=false; await refreshData(); render(); showToast("Profile updated."); }
+    else showToast(r.error||"Update failed");
+  });
+
+  on('btn-up-main','click', ()=> uploadPhoto('up-main','main'));
+  on('btn-up-agreement','click', ()=> uploadPhoto('up-agreement','agreement'));
+  on('btn-up-activity','click', ()=> uploadPhoto('up-activity','activity'));
+
+  on('sale-periodtype','change', e=>{
+    document.getElementById('sale-period-fields').innerHTML = renderSalePeriodFields(e.target.value);
+  });
+  const spf = document.getElementById('sale-period-fields');
+  if(spf) spf.innerHTML = renderSalePeriodFields('Daily');
+
+  on('btn-save-sale','click', async (ev)=>{
+    ev.preventDefault();
+    const form = document.getElementById('form-sale');
+    const fd = new FormData(form);
+    const periodType = fd.get('periodType');
+    let fy, periodLabel;
+    if(periodType==='Monthly'){ fy = fd.get('fy'); periodLabel = fy.split('-')[0] + "-" + fd.get('month'); if(fd.get('month')<="03") fy=fy; }
+    else { const d = fd.get('date') || new Date().toISOString().slice(0,10); periodLabel=d; const dt=new Date(d); const y=dt.getFullYear(), m=dt.getMonth()+1; fy = m>=4 ? (y+"-"+String(y+1).slice(2)) : ((y-1)+"-"+String(y).slice(2)); }
+    const payload = {
+      establishmentId: STATE.auth.id, fy, periodType, periodLabel,
+      salesAmount: fd.get('salesAmount'), investmentAmount: fd.get('investmentAmount')||0,
+      profitAmount: fd.get('profitAmount')||0, productsAvailable: fd.get('productsAvailable')||""
+    };
+    const photoInput = document.getElementById('sale-photo');
+    if(photoInput.files[0]){
+      if(photoInput.files[0].size > 5*1024*1024){ showToast("Photo exceeds 5 MB."); return; }
+      payload.photoBase64 = await fileToBase64(photoInput.files[0]);
+      payload.photoMime = photoInput.files[0].type;
+    }
+    const r = await apiPost('addSale', payload);
+    if(r.ok){ await refreshData(); render(); showToast("Sales entry saved."); }
+    else showToast(r.error||"Save failed");
+  });
+
+  // admin: add establishment
+  const addDistrict = document.getElementById('add-district');
+  if(addDistrict){
+    const fillBlocks = ()=>{ document.getElementById('add-block').innerHTML = (DISTRICTS[addDistrict.value]||[]).map(b=>`<option>${b}</option>`).join(''); };
+    addDistrict.addEventListener('change', fillBlocks); fillBlocks();
+    document.getElementById('add-ownertype').addEventListener('change', e=>{
+      document.getElementById('add-ownername-label').textContent = e.target.value==='CLF' ? 'CLF Name' : 'VO Name';
+    });
+  }
+  on('btn-add-est','click', async (ev)=>{
+    ev.preventDefault();
+    const form = document.getElementById('form-add-est');
+    const fd = new FormData(form);
+    const payload = {}; fd.forEach((v,k)=> payload[k]=v);
+    const r = await apiPost('addEstablishment', payload);
+    if(r.ok){ await refreshData(); STATE.adminTab='manage'; render(); showToast("Establishment created: "+r.id); }
+    else showToast(r.error||"Could not create establishment");
+  });
+
+  document.querySelectorAll('[data-atab]').forEach(b=> b.addEventListener('click', ()=>{ STATE.adminTab=b.getAttribute('data-atab'); render(); }));
+  document.querySelectorAll('[data-reset-pw]').forEach(b=> b.addEventListener('click', async ()=>{
+    const id=b.getAttribute('data-reset-pw');
+    if(!confirm("Reset password for "+id+"? They will need to set a new one.")) return;
+    const r = await apiPost('adminResetEstablishmentPassword', {id});
+    if(r.ok){ await refreshData(); render(); showToast("Password reset for "+id); }
+  }));
+  document.querySelectorAll('[data-delete-sale]').forEach(b=> b.addEventListener('click', async ()=>{
+    const saleId=b.getAttribute('data-delete-sale');
+    if(!confirm("Delete this sales entry? This cannot be undone.")) return;
+    const r = await apiPost('adminDeleteSale', {saleId});
+    if(r.ok){ await refreshData(); render(); showToast("Entry deleted."); }
+  }));
+}
+
+async function uploadPhoto(inputId, kind){
+  const input = document.getElementById(inputId);
+  if(!input.files[0]){ showToast("Choose a file first."); return; }
+  if(input.files[0].size > 5*1024*1024){ showToast("File exceeds 5 MB limit."); return; }
+  const base64 = await fileToBase64(input.files[0]);
+  const r = await apiPost('uploadEstablishmentPhoto', {id: STATE.auth.id, kind, photoBase64: base64, photoMime: input.files[0].type});
+  if(r.ok){ await refreshData(); render(); showToast("Uploaded."); }
+  else showToast(r.error||"Upload failed");
+}
+
+/* ============ INIT ============ */
+(async function init(){
+  render();
+  await refreshData();
+  render();
+})();
+</script>
+</body>
+</html>
