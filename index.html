@@ -95,9 +95,10 @@
   .report-header img{height:56px;}
   .report-header h2{margin:0;color:var(--navy);font-size:17px;}
   .report-header p{margin:2px 0 0;font-size:11.5px;color:var(--ink-soft);}
-  @media print{
+@media print{
     header,.no-print{display:none !important;}
-   main{display:none !important;}
+    main{display:none !important;}
+    .hero{display:none !important;}
     body{background:#fff;}
     .modal-bg{position:static;background:none;display:block;padding:0;}
     .modal{max-width:100%;max-height:none;overflow:visible;box-shadow:none;border-radius:0;padding:0;}
