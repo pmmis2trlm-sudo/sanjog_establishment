@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sanjog Outlet Progress Tracker — TRLM</title>
+<title>Sanjog Establishment Progress Tracker — TRLM</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <style>
   :root{
@@ -32,7 +32,7 @@
   .header-inner{max-width:1280px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:16px;}
   .header-inner img.logo{height:52px;width:52px;object-fit:contain;}
   .header-title{flex:1;text-align:center;}
-  .header-title h1{margin:0;font-size:19px;color:var(--navy);letter-spacing:.3px;}
+  .header-title h1{margin:0;font-size:24px;color:var(--navy);letter-spacing:.3px;}
   .header-title p{margin:2px 0 0;font-size:12px;color:var(--ink-soft);}
   nav.tabs{display:flex;gap:4px;}
   nav.tabs button{background:transparent;border:none;padding:8px 14px;font-size:13.5px;font-weight:600;color:var(--ink-soft);border-bottom:3px solid transparent;}
@@ -115,7 +115,7 @@ const DISTRICTS = {
   "UNAKOTI": ["CHANDIPUR","GOURNAGAR","KUMARGHAT","PECHARTHAL"],
   "WEST TRIPURA": ["BAMUTIA","BELBARI","DUKLI","HEZAMARA","JIRANIA","LEFUNGA","MANDWI","MOHANPUR","OLD AGARTALA"]
 };
-const CATEGORIES = ["Sanjog Outlet","SKU-Outlet","Sanjog Canteen","Rural Mart","OSOP","Sanjog Kiosk"];
+const CATEGORIES = [" Outlet","SKU-Outlet"," Canteen","Rural Mart","OSOP"," Kiosk"];
 const FY_LIST = ["2023-24","2024-25","2025-26","2026-27","2027-28","2028-29"];
 const MONTH_ORDER = ["04","05","06","07","08","09","10","11","12","01","02","03"];
 const MONTH_NAMES = {"01":"Jan","02":"Feb","03":"Mar","04":"Apr","05":"May","06":"Jun","07":"Jul","08":"Aug","09":"Sep","10":"Oct","11":"Nov","12":"Dec"};
@@ -231,7 +231,7 @@ function renderHeader(){
   return `<header><div class="header-inner">
     <img class="logo" src="assets/trlm-logo.png" alt="TRLM">
     <div class="header-title">
-      <h1>Sanjog Outlet Progress Tracker</h1>
+      <h1>Sanjog Establishment Progress Tracker</h1>
       <p>Tripura Rural Livelihood Mission</p>
     </div>
     <img class="logo" src="assets/sanjog-logo.png" alt="Sanjog">
@@ -258,7 +258,7 @@ function renderDashboard(){
 
   return `
   <div class="hero">
-    <h2>Sanjog Outlet Progress Tracker</h2>
+    <h2>Sanjog Establishment Progress Tracker</h2>
     <p>Tripura Rural Livelihood Mission — women SHG-run outlets, canteens, kiosks &amp; rural marts across the state</p>
     <div class="kpis">
       <div class="kpi"><div class="num">${k.count}</div><div class="lbl">Establishments (filtered)</div></div>
@@ -614,7 +614,7 @@ function renderModal(){
   return `<div class="modal-bg" id="modal-bg"><div class="modal">
     <button class="close no-print" id="modal-close">&times;</button>
     <div class="report-header">
-      <img src="assets/trlm-logo.png"><div><h2>${esc(e.name)}</h2><p>Tripura Rural Livelihood Mission — Sanjog Outlet Progress Tracker</p></div><img src="assets/sanjog-logo.png" style="margin-left:auto;">
+      <img src="assets/trlm-logo.png"><div><h2>${esc(e.name)}</h2><p>Tripura Rural Livelihood Mission </p></div><img src="assets/sanjog-logo.png" style="margin-left:auto;">
     </div>
     <div class="grid2">
       <div><b>ID:</b> ${e.id}</div><div><b>Category:</b> ${esc(e.category)}</div>
