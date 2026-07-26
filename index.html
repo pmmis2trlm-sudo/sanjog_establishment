@@ -613,9 +613,11 @@ function renderModal(){
   const e = STATE.data.establishments.find(x=>x.id===STATE.modal.id);
   if(!e) return '';
   const sales = STATE.data.sales.filter(s=>s.establishmentId===e.id);
-  const totalSales = sales.reduce((a,s)=>a+s.salesAmount,0);
-  const totalInv = sales.reduce((a,s)=>a+s.investmentAmount,0);
-  const totalProfit = sales.reduce((a,s)=>a+s.profitAmount,0);
+  const salesByFY = fy => sales.filter(s=>s.fy===fy).reduce((a,s)=>a+s.salesAmount,0);
+   const currentSales = sales.filter(s=>!SALES_ONLY_FY.includes(s.fy));
+   const totalSales = currentSales.reduce((a,s)=>a+s.salesAmount,0);
+   const totalInv = currentSales.reduce((a,s)=>a+s.investmentAmount,0);
+   const totalProfit = currentSales.reduce((a,s)=>a+s.profitAmount,0);
   return `<div class="modal-bg" id="modal-bg"><div class="modal">
     <button class="close no-print" id="modal-close">&times;</button>
     <div class="report-header">
@@ -628,14 +630,20 @@ function renderModal(){
       <div><b>SHG Members:</b> ${e.shgMemberCount}</div><div><b>Inception:</b> ${esc(e.inceptionDate)}</div>
       <div><b>Nodal Person:</b> ${esc(e.nodalPersonName)} (${esc(e.nodalPersonContact)})</div>
       <div><b>Signboard:</b> ${esc(e.signboardMounted)} · <b>Dress Code:</b> ${esc(e.dressCode)}</div>
-      <div><b>Infra Fund Received:</b> ${esc(e.infraFundReceived)}${e.infraFundReceived==='Yes'?` — ${fmtINR(e.infraFundAmount)} on ${esc(e.infraFundDate)}`:''}</div>
+      <div><b>Infra Fund Received:</b> ${esc(e.infraFundReceived)}</div>
+   <div><b>Infra Fund Amount:</b> ${e.infraFundAmount ? fmtINR(e.infraFundAmount) : '—'}</div>
+   <div><b>Infra Fund Date:</b> ${e.infraFundDate ? esc(e.infraFundDate) : '—'}</div>
     </div>
-    <h3 style="margin-top:16px;">Cumulative Performance (all recorded periods)</h3>
-    <div class="grid3">
-      <div class="card" style="text-align:center;"><div style="font-size:18px;font-weight:800;">${fmtINR(totalSales)}</div><div class="hint">Total Sales</div></div>
-      <div class="card" style="text-align:center;"><div style="font-size:18px;font-weight:800;">${fmtINR(totalInv)}</div><div class="hint">Total Investment</div></div>
-      <div class="card" style="text-align:center;"><div style="font-size:18px;font-weight:800;">${fmtINR(totalProfit)}</div><div class="hint">Total Profit</div></div>
-    </div>
+   <h3 style="margin-top:16px;">Historical Sales (FY 2023-24 to FY 2025-26)</h3>
+   <div class="grid3">
+     ${SALES_ONLY_FY.map(fy=>`<div class="card" style="text-align:center;"><div style="font-size:18px;font-weight:800;">${fmtINR(salesByFY(fy))}</div><div class="hint">Total Sales — FY ${fy}</div></div>`).join('')}
+   </div>
+   <h3 style="margin-top:16px;">Current Performance (FY 2026-27 onwards)</h3>
+   <div class="grid3">
+     <div class="card" style="text-align:center;"><div style="font-size:18px;font-weight:800;">${fmtINR(totalSales)}</div><div class="hint">Total Sales</div></div>
+     <div class="card" style="text-align:center;"><div style="font-size:18px;font-weight:800;">${fmtINR(totalInv)}</div><div class="hint">Total Investment</div></div>
+     <div class="card" style="text-align:center;"><div style="font-size:18px;font-weight:800;">${fmtINR(totalProfit)}</div><div class="hint">Total Profit</div></div>
+   </div>
     ${e.mainPhoto && e.mainPhoto.fileId ? `<h3>Photo</h3><img class="photo-thumb" style="width:140px;height:140px;" data-photo-id="${e.mainPhoto.fileId}" data-photo-mime="${e.mainPhoto.mime||''}" data-photo-preview="${e.mainPhoto.previewUrl}" data-photo-open="${e.mainPhoto.openUrl}" src="${e.mainPhoto.thumbUrl}">` : ''}
     <div class="no-print" style="margin-top:16px;"><button class="btn gold" id="btn-print-report">Print / Save as PDF</button></div>
   </div></div>`;
