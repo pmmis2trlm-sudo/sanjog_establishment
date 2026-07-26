@@ -133,7 +133,7 @@ const STATE = {
   auth: null, // {type:'admin'} or {type:'establishment', id}
   data: {establishments:[], sales:[]},
   loaded: false,
-  filters: {fy: "2025-26"(), district:"All", block:"All", category:"All"},
+  filters: {fy: currentFY(), district:"All", block:"All", category:"All"},
   modal: null, // {type:'establishment', id} | {type:'photo', ...}
   portalTab: "profile",
   adminTab: "add",
@@ -271,7 +271,7 @@ function renderDashboard(){
     <div class="card">
       <div class="filters">
         <div class="fld"><label>Financial Year</label>
-          <select id="f-fy">${DASHBOARD_FY_LIST(y=>`<option ${y===fy?'selected':''}>${y}</option>`).join('')}</select>
+          <select id="f-fy">${FY_LIST.map(y=>`<option ${y===fy?'selected':''}>${y}</option>`).join('')}</select>
         </div>
         <div class="fld"><label>District</label>
           <select id="f-district"><option ${STATE.filters.district==='All'?'selected':''}>All</option>
