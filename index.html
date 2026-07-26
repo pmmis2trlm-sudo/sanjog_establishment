@@ -262,10 +262,14 @@ function renderDashboard(){
     <h2>Sanjog Establishment Progress Tracker</h2>
     <p>Tripura Rural Livelihood Mission — women SHG-run outlets, canteens, kiosks &amp; rural marts across the state</p>
     <div class="kpis">
-      <div class="kpi"><div class="num">${k.count}</div><div class="lbl">Establishments (filtered)</div></div>
-      <div class="kpi"><div class="num">${fmtINR(k.totalSales)}</div><div class="lbl">Total Sales — FY ${fy}</div></div>
-      <div class="kpi"><div class="num">${fmtINR(k.totalInvestment)}</div><div class="lbl">Total Investment — FY ${fy}</div></div>
-      <div class="kpi"><div class="num">${fmtINR(k.totalProfit)}</div><div class="lbl">Total Profit — FY ${fy}</div></div>
+      <div class="kpis">
+     <div class="kpi"><div class="num">${k.count}</div><div class="lbl">Establishments (filtered)</div></div>
+     <div class="kpi"><div class="num">${fmtINR(k.totalSales)}</div><div class="lbl">Total Sales — FY ${fy}</div></div>
+     ${SALES_ONLY_FY.includes(fy) ? '' : `
+     <div class="kpi"><div class="num">${fmtINR(k.totalInvestment)}</div><div class="lbl">Total Investment — FY ${fy}</div></div>
+     <div class="kpi"><div class="num">${fmtINR(k.totalProfit)}</div><div class="lbl">Total Profit — FY ${fy}</div></div>
+     `}
+   </div>
     </div>
   </div>
   <main>
