@@ -196,6 +196,7 @@ function fileToBase64(file){
 function showToast(msg){ STATE.toast = msg; render(); setTimeout(()=>{ STATE.toast=null; render(); }, 3200); }
 function fmtINR(n){ return "₹" + (Number(n)||0).toLocaleString('en-IN'); }
 function esc(s){ return (s===undefined||s===null) ? "" : String(s); }
+function fyLabel(fy){ return fy==="All" ? "All Years" : ("FY " + fy); }
 
 /* ============ DERIVED DATA ============ */
 function filteredEstablishments(){
@@ -207,7 +208,7 @@ function filteredEstablishments(){
   });
 }
 function salesForEstablishments(ids, fy){
-  return STATE.data.sales.filter(s=> ids.includes(s.establishmentId) && (!fy || s.fy===fy));
+  return STATE.data.sales.filter(s=> ids.includes(s.establishmentId) && (!fy || fy==="All" || s.fy===fy));
 }
 function kpisFor(estList, fy){
   const ids = estList.map(e=>e.id);
@@ -293,10 +294,10 @@ function renderDashboard(){
     <div class="kpis">
       <div class="kpis">
      <div class="kpi"><div class="num">${k.count}</div><div class="lbl">Establishments (filtered)</div></div>
-     <div class="kpi"><div class="num">${fmtINR(k.totalSales)}</div><div class="lbl">Total Sales — FY ${fy}</div></div>
-     ${SALES_ONLY_FY.includes(fy) ? '' : `
-     <div class="kpi"><div class="num">${fmtINR(k.totalInvestment)}</div><div class="lbl">Total Investment — FY ${fy}</div></div>
-     <div class="kpi"><div class="num">${fmtINR(k.totalProfit)}</div><div class="lbl">Total Profit — FY ${fy}</div></div>
+     <div class="kpi"><div class="num">${fmtINR(k.totalSales)}</div><div class="lbl">Total Sales — ${fyLabel(fy)}</div></div>
+     ${fy!=="All" && SALES_ONLY_FY.includes(fy) ? '' : `
+     <div class="kpi"><div class="num">${fmtINR(k.totalInvestment)}</div><div class="lbl">Total Investment — ${fyLabel(fy)}</div></div>
+     <div class="kpi"><div class="num">${fmtINR(k.totalProfit)}</div><div class="lbl">Total Profit — ${fyLabel(fy)}</div></div>
      `}
    </div>
     </div>
@@ -305,7 +306,7 @@ function renderDashboard(){
     <div class="card">
       <div class="filters">
         <div class="fld"><label>Financial Year</label>
-          <select id="f-fy">${FY_LIST.map(y=>`<option ${y===fy?'selected':''}>${y}</option>`).join('')}</select>
+          <select id="f-fy"><option value="All" ${fy==='All'?'selected':''}>All Years</option>${FY_LIST.map(y=>`<option ${y===fy?'selected':''}>${y}</option>`).join('')}</select>
         </div>
         <div class="fld"><label>District</label>
           <select id="f-district"><option ${STATE.filters.district==='All'?'selected':''}>All</option>
@@ -323,10 +324,10 @@ function renderDashboard(){
     </div>
 
     <div class="charts-grid">
-      <div class="card"><h3>Month-wise Sales Trend — FY ${fy}</h3><div class="chart-box"><canvas id="chart-trend"></canvas></div></div>
+      <div class="card"><h3>Month-wise Sales Trend — ${fyLabel(fy)}${fy==='All'?' (all years combined by month)':''}</h3><div class="chart-box"><canvas id="chart-trend"></canvas></div></div>
       <div class="card"><h3>Establishments by Category</h3><div class="chart-box"><canvas id="chart-category"></canvas></div></div>
     </div>
-    <div class="card"><h3>Sales by District — FY ${fy}</h3><div class="chart-box"><canvas id="chart-district"></canvas></div></div>
+    <div class="card"><h3>Sales by District — ${fyLabel(fy)}</h3><div class="chart-box"><canvas id="chart-district"></canvas></div></div>
 
     <div class="card">
       <h3>Establishments (${estList.length})</h3>
@@ -346,7 +347,7 @@ function renderEstCard(e){
     <div class="body">
       <div class="name">${esc(e.name)}</div>
       <div class="meta">${esc(e.category)} · ${esc(e.block)}, ${esc(e.district)}</div>
-      <div class="stats"><div>Sales FY${STATE.filters.fy}<b>${fmtINR(total)}</b></div><div>Members<b>${e.shgMemberCount}</b></div></div>
+      <div class="stats"><div>Sales ${fyLabel(STATE.filters.fy)}<b>${fmtINR(total)}</b></div><div>Members<b>${e.shgMemberCount}</b></div></div>
     </div>
     <div class="foot"><button class="btn ghost" data-view-est="${e.id}">View Details</button></div>
   </div>`;
