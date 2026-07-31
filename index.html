@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sanjog Establishment Progress Tracker — TRLM</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root{
     --navy:#0b3d66; --navy-deep:#082c4a; --gold:#e08a1e; --paper:#faf7f0;
@@ -687,27 +687,42 @@ function drawCharts(){
   const estList = filteredEstablishments();
   const fy = STATE.filters.fy;
 
+  if(typeof Chart === 'undefined'){
+    console.error('Chart.js failed to load — check network/CDN access to cdnjs.cloudflare.com.');
+    ['chart-trend','chart-category','chart-district'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el && el.parentElement) el.parentElement.insertAdjacentHTML('beforeend', '<p class="hint" style="color:var(--bad);">Chart library failed to load. Check your internet connection or ask your admin to whitelist cdnjs.cloudflare.com.</p>');
+    });
+    return;
+  }
+
   const trendEl = document.getElementById('chart-trend');
   if(trendEl){
-    const vals = monthWiseTotals(estList, fy);
-    STATE.charts.trend = new Chart(trendEl, {type:'line', data:{
-      labels: MONTH_ORDER.map(m=>MONTH_NAMES[m]),
-      datasets:[{label:'Sales (₹)', data: vals, borderColor:'#0b3d66', backgroundColor:'rgba(11,61,102,.12)', fill:true, tension:.3}]
-    }, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}});
+    try{
+      const vals = monthWiseTotals(estList, fy);
+      STATE.charts.trend = new Chart(trendEl, {type:'line', data:{
+        labels: MONTH_ORDER.map(m=>MONTH_NAMES[m]),
+        datasets:[{label:'Sales (₹)', data: vals, borderColor:'#0b3d66', backgroundColor:'rgba(11,61,102,.12)', fill:true, tension:.3}]
+      }, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}});
+    } catch(err){ console.error('Trend chart failed:', err); }
   }
   const catEl = document.getElementById('chart-category');
   if(catEl){
-    const byCat = categoryWiseCounts(estList);
-    STATE.charts.category = new Chart(catEl, {type:'doughnut', data:{
-      labels:Object.keys(byCat), datasets:[{data:Object.values(byCat), backgroundColor:['#0b3d66','#e08a1e','#1c7a3e','#b3261e','#6b7280','#8e44ad']}]
-    }, options:{responsive:true, maintainAspectRatio:false}});
+    try{
+      const byCat = categoryWiseCounts(estList);
+      STATE.charts.category = new Chart(catEl, {type:'doughnut', data:{
+        labels:Object.keys(byCat), datasets:[{data:Object.values(byCat), backgroundColor:['#0b3d66','#e08a1e','#1c7a3e','#b3261e','#6b7280','#8e44ad']}]
+      }, options:{responsive:true, maintainAspectRatio:false}});
+    } catch(err){ console.error('Category chart failed:', err); }
   }
   const distEl = document.getElementById('chart-district');
   if(distEl){
-    const byDist = districtWiseTotals(estList, fy);
-    STATE.charts.district = new Chart(distEl, {type:'bar', data:{
-      labels:Object.keys(byDist), datasets:[{label:'Sales (₹)', data:Object.values(byDist), backgroundColor:'#e08a1e'}]
-    }, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}});
+    try{
+      const byDist = districtWiseTotals(estList, fy);
+      STATE.charts.district = new Chart(distEl, {type:'bar', data:{
+        labels:Object.keys(byDist), datasets:[{label:'Sales (₹)', data:Object.values(byDist), backgroundColor:'#e08a1e'}]
+      }, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}});
+    } catch(err){ console.error('District chart failed:', err); }
   }
 }
 
