@@ -198,6 +198,18 @@ function fmtINR(n){ return "₹" + (Number(n)||0).toLocaleString('en-IN'); }
 function esc(s){ return (s===undefined||s===null) ? "" : String(s); }
 function fyLabel(fy){ return fy==="All" ? "All Years" : ("FY " + fy); }
 
+/* Warns the establishment user, before they submit, if a Daily entry already
+   exists for the selected date. The backend is the real enforcement point —
+   this is just a friendly heads-up so people don't fill the form out twice. */
+function checkDailyDuplicate(){
+  const dateInput = document.getElementById('sale-date');
+  const warnEl = document.getElementById('sale-date-warn');
+  if(!dateInput || !warnEl || !STATE.auth) return;
+  const date = dateInput.value;
+  const exists = STATE.data.sales.some(s=> s.establishmentId===STATE.auth.id && s.periodType==='Daily' && s.periodLabel===date);
+  warnEl.textContent = exists ? "An entry for this date has already been submitted — you won't be able to save another one." : "";
+}
+
 /* ============ DERIVED DATA ============ */
 function filteredEstablishments(){
   return STATE.data.establishments.filter(e=>{
@@ -483,7 +495,7 @@ function renderSalesTab(e, mySales){
     <div class="grid2">
       <div>
         <h3>Add Sales Entry</h3>
-        <p class="hint">Entries cannot be edited once saved — please double-check figures before submitting.</p>
+        <p class="hint">Entries cannot be edited once saved — please double-check figures before submitting. Only one Daily entry per establishment per date is allowed.</p>
         <form id="form-sale">
           <label>Entry Type</label>
           <select name="periodType" id="sale-periodtype">
@@ -521,7 +533,8 @@ function renderSalePeriodFields(periodType){
       <div><label>Month</label><select name="month">${MONTH_ORDER.map(m=>`<option value="${m}">${MONTH_NAMES[m]}</option>`).join('')}</select></div>
     </div>`;
   }
-  return `<div><label>Date</label><input name="date" type="date" value="${new Date().toISOString().slice(0,10)}"></div>`;
+  return `<div><label>Date</label><input name="date" id="sale-date" type="date" value="${new Date().toISOString().slice(0,10)}">
+    <p id="sale-date-warn" class="hint" style="color:var(--bad);"></p></div>`;
 }
 
 /* ---- admin ---- */
@@ -612,7 +625,7 @@ function renderAdminSales(){
   const rows = STATE.data.sales.slice().sort((a,b)=>(b.periodLabel||"").localeCompare(a.periodLabel||"")).map(s=>{
     const e = STATE.data.establishments.find(x=>x.id===s.establishmentId);
     return `<tr>
-      <td class="mono">${s.id}</td><td>${e?esc(e.name):s.establishmentId}</td><td>${esc(s.periodLabel)}</td><td>${esc(s.fy)}</td>
+      <td class="mono">${s.id}</td><td>${esc(s.block || (e?e.block:''))}</td><td>${e?esc(e.name):s.establishmentId}</td><td>${esc(s.periodLabel)}</td><td>${esc(s.fy)}</td>
       <td class="mono">${fmtINR(s.salesAmount)}</td><td class="mono">${fmtINR(s.investmentAmount)}</td><td class="mono">${fmtINR(s.profitAmount)}</td>
       <td><button class="btn danger" data-delete-sale="${s.id}" style="padding:5px 10px;">Delete</button></td>
     </tr>`;
@@ -620,8 +633,8 @@ function renderAdminSales(){
   return `<h3>All Sales Entries (${STATE.data.sales.length})</h3>
     <p class="hint">Use delete only to correct genuine data-entry errors — establishment users cannot edit sales themselves.</p>
     <div style="max-height:520px;overflow:auto;">
-    <table><thead><tr><th>Sale ID</th><th>Establishment</th><th>Period</th><th>FY</th><th>Sales</th><th>Investment</th><th>Profit</th><th></th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="8" class="hint">No entries yet.</td></tr>'}</tbody></table>
+    <table><thead><tr><th>Sale ID</th><th>Block</th><th>Establishment</th><th>Period</th><th>FY</th><th>Sales</th><th>Investment</th><th>Profit</th><th></th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="9" class="hint">No entries yet.</td></tr>'}</tbody></table>
     </div>`;
 }
 
@@ -799,17 +812,32 @@ function bindEvents(){
 
   on('sale-periodtype','change', e=>{
     document.getElementById('sale-period-fields').innerHTML = renderSalePeriodFields(e.target.value);
+    on('sale-date','change', checkDailyDuplicate);
+    checkDailyDuplicate();
   });
   const spf = document.getElementById('sale-period-fields');
-  if(spf) spf.innerHTML = renderSalePeriodFields('Daily');
+  if(spf){ spf.innerHTML = renderSalePeriodFields('Daily'); }
+  on('sale-date','change', checkDailyDuplicate);
+  checkDailyDuplicate();
 
   on('btn-save-sale','click', async (ev)=>{
     ev.preventDefault();
+    const btn = ev.currentTarget;
     const form = document.getElementById('form-sale');
     const fd = new FormData(form);
     const periodType = fd.get('periodType');
     let fy, periodLabel;
-    if(periodType==='Monthly'){ fy = fd.get('fy'); periodLabel = fy.split('-')[0] + "-" + fd.get('month'); if(fd.get('month')<="03") fy=fy; }
+    if(periodType==='Monthly'){
+      fy = fd.get('fy');
+      const month = fd.get('month');
+      // Jan/Feb/Mar of a financial year fall in the SECOND calendar year of that FY
+      // (e.g. FY 2025-26 runs Apr 2025 - Mar 2026), so the calendar year must roll
+      // forward for those three months. Previously this always used the FY's start
+      // year, which mis-tagged every Jan/Feb/Mar entry with the wrong calendar year.
+      const fyStartYear = parseInt(fy.split('-')[0], 10);
+      const calYear = (month <= "03") ? (fyStartYear + 1) : fyStartYear;
+      periodLabel = calYear + "-" + month;
+    }
     else { const d = fd.get('date') || new Date().toISOString().slice(0,10); periodLabel=d; const dt=new Date(d); const y=dt.getFullYear(), m=dt.getMonth()+1; fy = m>=4 ? (y+"-"+String(y+1).slice(2)) : ((y-1)+"-"+String(y).slice(2)); }
     const payload = {
       establishmentId: STATE.auth.id, fy, periodType, periodLabel,
@@ -822,9 +850,10 @@ function bindEvents(){
       payload.photoBase64 = await fileToBase64(photoInput.files[0]);
       payload.photoMime = photoInput.files[0].type;
     }
+    btn.disabled = true;
     const r = await apiPost('addSale', payload);
     if(r.ok){ await refreshData(); render(); showToast("Sales entry saved."); }
-    else showToast(r.error||"Save failed");
+    else { showToast(r.error||"Save failed"); btn.disabled = false; }
   });
 
   // admin: add establishment
